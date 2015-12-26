@@ -50,6 +50,78 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 	sendResponse({})
 })
 
+// setting value on setting tab
+settingTab();
+
+$('#save-setting').on("click", function(e){
+	saveSetting(e);
+});
+
+$('#reset-setting').on("click", function(e){
+	resetSetting(e);
+});
+
+function settingTab(){
+	var data = getSetting();
+	console.log(data);
+	listSite = "";
+	blackList = "";
+	if(data.listSite)
+		listSite = data.listSite.join(", ");
+	if(data.blackList)
+		blackList = data.blackList.join(", ");
+	$("#list-site").val(listSite);
+	$("#list-seller").val(blackList);
+	return;
+}
+
+function resetSetting(event){
+	event.preventDefault();
+	data = {
+		listSite: ["ebay.com","amazon.com","chegg.com"],
+		blackList: []
+	};
+	alert("Reset setting success!");
+	return localStorage.setItem("settingOptions", JSON.stringify(data));
+}
+
+function saveSetting(event){
+	event.preventDefault();
+	var listSite = $("#list-site").val();
+	listSite = (listSite && listSite.split(",")) || [];
+	for(var i in listSite){
+		listSite[i] = listSite[i].trim();
+	}
+	var blackList = $("#list-seller").val();
+	blackList = (blackList && blackList.split(",")) || [];
+	for(var i in blackList){
+		blackList[i] = blackList[i].trim();
+	}
+	data = {
+		listSite: listSite,
+		blackList: blackList
+	};
+	alert("Save success!");
+	return localStorage.setItem("settingOptions", JSON.stringify(data));
+}
+
+function getSetting(){
+	var data = localStorage.getItem("settingOptions");
+	if(!data){
+		var listSite = $("#list-site").val();
+		listSite = (listSite && listSite.split(",")) || [];
+		var blackList = $("#list-seller").val();
+		blackList = (blackList && blackList.split(",")) || [];
+		data = {
+			listSite: listSite,
+			blackList: blackList
+		};
+	}else{
+		data = JSON.parse(data);
+	}
+	return data;
+}
+
 function ajaxSend(options){
 	return new Promise(function(resolve, reject){
 		var data = {

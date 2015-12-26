@@ -102,5 +102,5 @@ function saveData(data){
 function getData(data){
 	if(!data["key"])
 		return;
-	return localStorage.setItem(data["key"]);
+	return localStorage.getItem(data["key"]);
 }
