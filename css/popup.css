@@ -1,15 +1,23 @@
 body{
-	min-width: 400px;
+	width: 500px;
 }
 .intro-header .container{
 	min-height: 400px;
 }
 .intro-header {
     margin-top: 60px;
+    overflow: inherit;
 }
-table.data-table{
-	margin-top: 10px;
+.tab-content {
+    margin-top: 10px;
 }
 table.data-table th, table.data-table td.action, table.data-table td.status{
 	text-align: center;
+}
+table.data-table .btn-danger{
+	margin-top: 4px;
+}
+td.link {
+    width: 340px;
+    word-break: break-all;
 }
