@@ -67,11 +67,6 @@ function getList(i, cb){
 		Promise.all(promisses)
 			.then(function(allData){
 				cb(allData);
-				var options = {
-					key: "dataBook",
-					value: allData
-				};
-				saveData(options);
 			})
 			.catch(function(err){
 				console.log(err);
@@ -89,18 +84,4 @@ function serialize(obj){
 	    str += key + "=" + encodeURIComponent(obj[key]);
 	}
 	return str;
-}
-
-function saveData(data){
-	if(!data['key'])
-		return;
-	if(!data["value"])
-		localStorage.removeItem(data["key"]);
-	return localStorage.setItem(data["key"], JSON.stringify(data["value"]));
-}
-
-function getData(data){
-	if(!data["key"])
-		return;
-	return localStorage.getItem(data["key"]);
 }
