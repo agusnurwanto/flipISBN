@@ -1,0 +1,40 @@
+{
+  "name": "flipISBN",
+  "description": "Automate Flip Links for 3 Sites",
+  "version": "0.1",
+  "manifest_version": 2,
+  "content_security_policy": "script-src 'self' https://ssl.google-analytics.com https://apis.google.com https://api.github.com; object-src 'self'",
+  "icons": {
+    "16": "images/flip.png",
+    "48": "images/flip.png",
+    "128": "images/flip.png"
+  },
+   "content_scripts": [
+    {
+      "matches": [
+        "http://flippiness.com/*", 
+        "http://ebay.com/*", 
+        "http://amazon.com/*", 
+        "http://chegg.com/*", 
+        "https://flippiness.com/*", 
+        "https://ebay.com/*", 
+        "https://amazon.com/*", 
+        "https://chegg.com/*"
+      ],
+      "js": ["jquery.min.js", "scrape.js"]
+    }],
+  "options_page": "options.html",
+  "browser_action": {
+    "default_icon": "images/flip.png",
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+      "contextMenus",
+      "cookies",
+      "http://*/*", "https://*/*" ,
+      "notifications",
+      "activeTab",
+      "storage",
+      "tabs"
+  ]
+}

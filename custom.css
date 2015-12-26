@@ -1,0 +1,16 @@
+.popover{
+    width: 560px!important;
+    max-width: 1000px!important;
+}
+.popover-content {
+	height: 144px;
+    position: relative;
+    overflow: hidden;
+}
+.isbn-class{
+	height: 1000px;
+    width: 1000px;
+    position: absolute;
+    margin-left: -145px;
+    margin-top: -400px;
+}
