@@ -97,18 +97,11 @@ function generateTable(data){
 			var tr = $('table.data-table tbody #tr'+i);
 			var link = $('.link', tr).text();
 			$('button.btn-primary', tr).on("click", function(){
+				var settings = getSetting();
 				var options = {
-					url: link,
-					type: "GET"
+					url : link
 				}
-				alert(link+' send');
-				ajaxSend(options)
-				.then(function(res){
-
-				})
-				.catch(function(err){
-					console.log(err);
-				})
+				scrapingPrice(options);
 			});
 			$('button.btn-danger', tr).on("click", function(){
 				alert(link+' remove');
@@ -118,6 +111,63 @@ function generateTable(data){
     	trBody = '<tr><td colspan="3" class="status">Data is empty!</td></tr>';
 		$('table.data-table tbody').html(trBody);
     }
+}
+
+function scrapingPrice(data){
+	var link = data["url"];
+	var options = {
+		url: link,
+		type: "GET"
+	}
+	alert(link+' send');
+	ajaxSend(options)
+	.then(function(res){
+		var price = 0;
+		if(link.indexOf("ebay.com") != "-1"){
+			var html = $.parseHTML(res
+	  			.replace(/<img[^>]*>/g,"")
+	  			.replace(/<link[^>]*>/g,"")
+	  			.replace(/<script[^>]*>/g,""));
+			var seller = $(".red", html).eq(0).parent().parent().next().next().next().text();
+			if(settings.blackList.indexOf(seller) != "-1"){
+				return alert("seller: "+seller+" in blackList!");
+			}
+			if(settings.blackListRecycle=="1"){
+				if(seller.indexOf("recycle") != "-1"){
+					return alert("seller: "+seller+" in blackList! contain recycle.");
+				}
+			}
+			var prices = $(".red", html);
+			var currentPrice = prices.eq(0).text().match(/\d|\./g).join("");
+			var shippingPrice = prices.eq(1).text().match(/\d|\./g).join("");
+			price = (+currentPrice) + (+shippingPrice);
+		}
+		var options = {
+			url: "https://www.bookbyte.com/buyback2.aspx?isbns="+$('.isbn', tr).text(),
+			type: "GET"
+		}
+		ajaxSend(options)
+		.then(function(res){
+			var html = $.parseHTML(res
+	  			.replace(/<img[^>]*>/g,"")
+	  			.replace(/<link[^>]*>/g,"")
+	  			.replace(/<script[^>]*>/g,""));
+			var priceBookbyte = $(".gvItemsBuyback table span", html).text().match(/\d|\./g).join("");
+			var descriptionPrice = "price="+price+" | priceBookbyte="+priceBookbyte;
+			console.log(descriptionPrice);
+			if(price < (+priceBookbyte)){
+				alert(descriptionPrice+" | the price is lowest then bookbyte!");
+			}else{
+				alert(descriptionPrice+" | the price is more expensive then bookbyte!");
+			}
+		})
+		.catch(function(err){
+			console.log(err);
+		})
+	})
+	.catch(function(err){
+		console.log(err);
+	})
 }
 
 function saveData(data){
@@ -221,7 +271,7 @@ function getSetting(){
 		blackList = (blackList && blackList.split(",")) || [];
 		data = {
 			listSite: listSite,
-			blackList: blackList
+			blackList: blackList,
 			blackListRecycle: $("#black-list-recycle").val()
 		};
 	}else{
