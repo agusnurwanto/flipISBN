@@ -163,8 +163,28 @@ function settingTab(){
 function resetSetting(event){
 	event.preventDefault();
 	data = {
-		listSite: ["ebay.com","amazon.com","chegg.com"],
-		blackList: []
+		listSite: [
+			"ebay.com", 
+			"amazon.com", 
+			"chegg.com"
+		],
+		blackList: [
+			"big4northeast", 
+			"textbook_rebellion", 
+			"texts_direct", 
+			"cashmoneytexts", 
+			"juggernautz11", 
+			"textbooknook", 
+			"west.street.books", 
+			"westbks2010", 
+			"textbookcharlie77", 
+			"recycleabook", 
+			"recycle-a-textbook859", 
+			"campus_bookstore", 
+			"gus4577"
+		],
+		blackListRecycle: 1
+
 	};
 	alert("Reset setting success!");
 	return localStorage.setItem("settingOptions", JSON.stringify(data));
@@ -202,6 +222,7 @@ function getSetting(){
 		data = {
 			listSite: listSite,
 			blackList: blackList
+			blackListRecycle: $("#black-list-recycle").val()
 		};
 	}else{
 		data = JSON.parse(data);
