@@ -16,7 +16,7 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 settingTab();
 
 // setting value data book
-settingDataBook(0);
+settingDataBook();
 
 $('#save-setting').on("click", function(e){
 	saveSetting(e);
@@ -26,15 +26,31 @@ $('#reset-setting').on("click", function(e){
 	resetSetting(e);
 });
 
-function settingDataBook(i){
+$('#refresh-data-book').on("click", function(e){
+	refreshSetting(e);
+});
+
+function refreshSetting(event){
+	event.preventDefault();
+	sendDataLink();
+	setTimeout(function(){
+		settingDataBook();
+	}, 1000);
+}
+
+function settingDataBook(check){
 	var data = getData({ key: "dataBook" });
 	if(!data){
-		sendDataLink();
-		console.log(i);
-		if(i>=5)
-			return alert("Please go to https://flippiness.com/dashboard.php and reopen the popup extension!"); setTimeout(function(){
-			i+=1;
-			settingDataBook(i);
+		if(!check){
+			check = 0;
+			sendDataLink();
+		}else{
+			if(check >=5)
+				return;
+		}
+		setTimeout(function(){
+			check++;
+			settingDataBook(check);
 		}, 1000);
 	}else{
 		generateTable(JSON.parse(data));
@@ -102,6 +118,8 @@ function sendDataLink(){
 			chrome.tabs.sendMessage(tabs[0].id, {task: "getDataLink"}, function(response) {
 			    console.log('task sent', response); return;
 			})
+		}else{
+			alert("Please go to https://flippiness.com/dashboard.php and reopen the popup extension!");
 		}
 	})
 }
