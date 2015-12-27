@@ -31,6 +31,27 @@ $('#refresh-data-book').on("click", function(e){
 	refreshSetting(e);
 });
 
+function htmlLoading(){
+	var loading = '<div id="block"></div>'
+        +'<span class="glyphicon glyphicon-refresh glyphicon-refresh-animate btn-loading"></span>';
+    return loading;
+}
+
+function setLoading(){
+	if($('.btn-loading').length>0)
+		return;
+	var loading = htmlLoading();
+	$("body").append(loading);
+    $(".btn-loading").on("click", function(e){
+    	e.preventDefault();
+    })
+}
+
+function remLoading(){
+	$('.btn-loading').remove();
+	$('#block').remove();
+}
+
 function validateLink(data){
 	var settings = getSetting();
 	var newData = [];
