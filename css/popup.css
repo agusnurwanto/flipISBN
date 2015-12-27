@@ -14,7 +14,7 @@ body{
 table.data-table th, table.data-table td.action, table.data-table td.status{
 	text-align: center;
 }
-table.data-table .btn-danger{
+table.data-table .btn-success{
 	margin-top: 4px;
 }
 td.link {
@@ -32,7 +32,7 @@ td.link {
     font-size: 40px;
 }
 #block{
-    position: absolute;
+    position: fixed;
     width: 100%;
     height: 100%;
     background-color: #000;

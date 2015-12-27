@@ -37,6 +37,7 @@ function getList(i, cb){
 					var buyPrice = $(b).find('.small-4.text-center span').text();
 					var urlBook = decodeURIComponent($(b).find('.small-4.text-center a').attr('data-url'));
 					var isbn = $(b).find(".small-9 .text-center").text().match(/\d/g).join("");
+					var bookbyteLink = "https://www.bookbyte.com/buyback2.aspx?isbns="+isbn;
 					// send data to could server
 					$.ajax({
 		                url : apiUrl+"?saveFlippiness=true",
@@ -52,9 +53,12 @@ function getList(i, cb){
 		            });
 					var data = {
 						isbn : isbn,
-						price : buyPrice,
+						flipPrice : buyPrice,
 						link : urlBook,
-						status : "saved"
+						bookbyteLink : bookbyteLink,
+						status : "new Scrape",
+						price : "-",
+						seller : "-"
 					};
 					resolve(data);
 				})
