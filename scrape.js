@@ -36,6 +36,7 @@ function getList(i, cb){
 				promisses[j] = new Promise(function(resolve, reject){
 					var buyPrice = $(b).find('.small-4.text-center span').text();
 					var urlBook = decodeURIComponent($(b).find('.small-4.text-center a').attr('data-url'));
+					var isbn = $(b).find(".small-9 .text-center").text().match(/\d/g).join("");
 					// send data to could server
 					$.ajax({
 		                url : apiUrl+"?saveFlippiness=true",
@@ -50,6 +51,7 @@ function getList(i, cb){
 		                }
 		            });
 					var data = {
+						isbn : isbn,
 						price : buyPrice,
 						link : urlBook,
 						status : "saved"

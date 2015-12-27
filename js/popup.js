@@ -81,13 +81,15 @@ function generateTable(data){
 	var trBody = "";
     if(data){
     	for(var i in data){
-    		trBody += '<tr id="tr'+i+'">'
-    			+'<td class="link">'+data[i].link+'</td>'
-    			+'<td class="status">'+data[i].status+'</td>'
-    			+'<td class="action">'
-	    			+'<button type="button" class="btn btn-primary btn-xs" data-id="'+i+'">Check</button>'
-	    			+'<button type="button" class="btn btn-danger btn-xs" data-id="'+i+'">Remove</button>'
-	    		+'</td>'
+    		trBody += ''
+    			+'<tr id="tr'+i+'">'
+	    			+'<td class="link">'+data[i].link+'</td>'
+	    			+'<td class="action" colspan="2">'
+	    				+'<b>ISBN 13</b>: <span class="isbn">'+data[i].isbn+'</span><br>'
+	    				+'<b>Status</b>: <span class="status">'+data[i].status+'</span><br>'
+		    			+'<button type="button" class="btn btn-primary btn-xs" data-id="'+i+'">Check</button><br>'
+		    			+'<button type="button" class="btn btn-danger btn-xs" data-id="'+i+'">Remove</button>'
+		    		+'</td>'
     			+'</tr>';
     	}
 		$('table.data-table tbody').html(trBody);
