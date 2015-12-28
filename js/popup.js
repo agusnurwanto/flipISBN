@@ -31,6 +31,12 @@ $('#refresh-data-book').on("click", function(e){
 	refreshSetting(e);
 });
 
+$('#bookbyte').on("click", function(e){
+	chrome.tabs.create({'url': 'https://www.bookbyte.com/buyback2.aspx' }, function(tab) {
+	  // Tab opened.
+	});
+});
+
 function htmlLoading(){
 	var loading = '<div id="block"></div>'
         +'<span class="glyphicon glyphicon-refresh glyphicon-refresh-animate btn-loading"></span>';
@@ -105,8 +111,12 @@ function generateTable(data){
     		trBody += ''
     			+'<tr id="tr'+i+'">'
 	    			+'<td class="link">'
-	    				+'<span class="current-link">'+data[i].link+'</span><br>'
-	    				+'<b>Bookbyte Link</b>: <span class="bookbyte-link">'+data[i].bookbyteLink+'</span>'
+	    				+'<a href="'+data[i].link+'" target="blank" title="Open link in new tab!">'
+	    					+'<span class="current-link">'+data[i].link+'</span>'
+	    				+'</a><br>'
+	    				+'<b>Bookbyte Link</b>: <a href="'+data[i].bookbyteLink+'" target="blank" title="Open link in new tab!">'
+	    					+'<span class="bookbyte-link">'+data[i].bookbyteLink+'</span>'
+	    				+'</a>'
 	    			+'</td>'
 	    			+'<td class="action" colspan="2">'
 	    				+'<b>ISBN 13</b>: <span class="isbn">'+data[i].isbn+'</span><br>'
@@ -173,6 +183,11 @@ function scrapingPrice(data){
 					remLoading();
 					return alert("seller: "+seller+" in blackList! contain recycle.");
 				}
+			}
+			var error = $('table tr td b').text();
+			if(error){
+				remLoading();
+				return alert("ERROR: "+error);
 			}
 			var prices = $(".red", html);
 			var currentPrice = prices.eq(0).text().match(/\d|\./g).join("");
