@@ -172,22 +172,12 @@ function scrapingPrice(data){
 	ajaxSend(options)
 	.then(function(res){
 		var price = 0;
+		var html = $.parseHTML(res
+  			.replace(/<img[^>]*>/g,"")
+  			.replace(/<link[^>]*>/g,"")
+  			.replace(/<script[^>]*>/g,""));
 		if(link.indexOf("ebay.com") != "-1"){
-			var html = $.parseHTML(res
-	  			.replace(/<img[^>]*>/g,"")
-	  			.replace(/<link[^>]*>/g,"")
-	  			.replace(/<script[^>]*>/g,""));
 			var seller = $(".red", html).eq(0).parent().parent().next().next().next().text();
-			if(settings.blackList.indexOf(seller) != "-1"){
-				remLoading();
-				return alert("seller: "+seller+" in blackList!");
-			}
-			if(settings.blackListRecycle=="1"){
-				if(seller.indexOf("recycle") != "-1"){
-					remLoading();
-					return alert("seller: "+seller+" in blackList! contain recycle.");
-				}
-			}
 			var error = $('table tr td b').text();
 			if(error){
 				remLoading();
@@ -197,26 +187,49 @@ function scrapingPrice(data){
 			var currentPrice = prices.eq(0).text().match(/\d|\./g).join("");
 			var shippingPrice = prices.eq(1).text().match(/\d|\./g).join("");
 			price = (+currentPrice) + (+shippingPrice);
-			$(".price", tr).text('$'+price);
-			$(".seller", tr).text(seller);
-			dataBook[i]["price"] = price;
-			dataBook[i]["seller"] = seller;
-			dataOptions["value"] = dataBook;
-			saveData(dataOptions);
+		}else if(link.indexOf("amazon.com") != "-1"){
+			var seller = $('.accordion-row-content .a-spacing-mini .a-link-normal', html).eq(0).text();
+			var price = $(".olp-padding-right .a-color-price", html).eq(0).text().match(/\d|\./g).join("");
+		}else if(link.indexOf("chegg.com") != "-1"){
+			var seller = $('.author-container a', html).text();
+			var price = $('.buy_radio_button').parent().find(".pricebox-price-label.pricebox-right").eq(1).text().match(/\d|\./g).join("");
 		}else{
 			remLoading();
 			return alert("Code scrape for "+site+" scrape not supported! Please contact developer.");
 		}
+
+		// seller validation
+		if(settings.blackList.indexOf(seller) != "-1"){
+			remLoading();
+			return alert("seller: "+seller+" in blackList!");
+		}
+		if(settings.blackListRecycle=="1"){
+			if(seller.indexOf("recycle") != "-1"){
+				remLoading();
+				return alert("seller: "+seller+" in blackList! contain recycle.");
+			}
+		}
+		$(".price", tr).text('$'+price);
+		$(".seller", tr).text(seller);
+		dataBook[i]["price"] = '$'+price;
+		dataBook[i]["seller"] = seller;
+		dataOptions["value"] = dataBook;
+		saveData(dataOptions);
 		var options = {
 			url: bookbyteLink,
 			type: "GET"
 		}
 		ajaxSend(options)
 		.then(function(res){
+			var idTable = false;
 			var html = $.parseHTML(res
 	  			.replace(/<img[^>]*>/g,"")
 	  			.replace(/<link[^>]*>/g,"")
 	  			.replace(/<script[^>]*>/g,""));
+			var optionsCheck = {
+				html : html,
+				isbn : dataBook[i]["isbn"]
+			};
             var err = $("#ctl00_ContentPlaceHolder1_trSpecialMessage", html).text().trim();
             if(err){
 				remLoading();
@@ -230,31 +243,34 @@ function scrapingPrice(data){
 					remLoading();
 					alert("("+site+") $"+price+" | seller: "+seller+" | (bookbyte.com) "+note);
 					var priceBookbyte = note;
-					var optionsCheck = {
-						html : html,
-						isbn : dataBook.isbn
-					};
-					var idTable = checkISBN(optionsCheck);
-					chrome.tabs.create({'url': 'https://www.bookbyte.com/buyback2.aspx?removeBook='+idTable }, function(tab) {
-					  // Tab opened.
-					});
+					idTable = checkISBN(optionsCheck);
 	            }else{
-		            var priceBookbyte = "$" + $("table.gvItemsBuyback table", html).eq(0)
+		            var priceBookbyte = $("table.gvItemsBuyback table", html).eq(0)
 		                .find("td div span").text()
 		                .split("$")[1];
 					remLoading();
-					var descriptionPrice = "("+site+") $"+price+" | (bookbyte.com) "+priceBookbyte;
+					var descriptionPrice = "("+site+") $"+price+" | (bookbyte.com) $"+priceBookbyte;
 					if(price < (+priceBookbyte)){
 						alert(descriptionPrice+" | the price is lowest then bookbyte!");
 					}else{
 						alert(descriptionPrice+" | the price is more expensive then bookbyte!");
+						optionsCheck["more_expensive"] = true;
+						idTable = checkISBN(optionsCheck);
 					}
 				}
 			}
-			$(".bookbytePrice", tr).text(priceBookbyte);
-			data[i]["bookbytePrice"] = priceBookbyte;
-			dataOptions["value"] = data;
+			$(".bookbytePrice", tr).text("$"+priceBookbyte);
+			dataBook[i]["bookbytePrice"] = "$"+priceBookbyte;
+			dataOptions["value"] = dataBook;
 			saveData(dataOptions);
+			if(idTable){
+				chrome.tabs.create({
+					'url': 'https://www.bookbyte.com/buyback2.aspx?removeBook='+idTable
+					+'&isbn='+dataBook[i]["isbn"] }, 
+					function(tab) {
+				  // Tab opened.
+				});
+			}
 		})
 		.catch(function(err){
 			remLoading();
@@ -274,12 +290,22 @@ function checkISBN(options){
 		$(h).find("td div strong").parent().each(function(i, b){ 
 			var num = jQuery(b).text().split(":")[1].trim();
 			if(num==options["isbn"]){
-				numTable = num;
+				numTable = j;
 				return false;
 			}
 		});
 		if(numTable){ return false; }
 	});
+	if(!numTable && options["more_expensive"]){
+		$("table.gvItemsBuyback>tbody>tr>td>table", html).eq(0).find("td").eq(4).find("div div div div").each(function(j,h){
+			var num = jQuery(h).text().split(":")[1].trim();
+			console.log(num, options["isbn"]);
+			if(num==options["isbn"]){
+				numTable = j;
+				return false;
+			}
+		})
+	}
 	return numTable;
 }
 

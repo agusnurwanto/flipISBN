@@ -44,9 +44,13 @@ function remBookbyte(options){
 	jQuery(document).ready(function($){
 		var id = options["id"];
 		$('#aspnetForm').attr("action", "buyback2.aspx");
-		setTimeout(function(){
-			eval(jQuery("table.gvItemsBuyback>tbody>tr>td>table").eq(id).find(".buybackRemoveWrapper a").attr("href"));
-		}, 1000);
+		var link = $("table.gvItemsBuyback>tbody>tr>td>table").eq(id).find(".buybackRemoveWrapper a").attr("href");
+		console.log(link);
+		if(link){
+			setTimeout(function(){
+				eval(link);
+			}, 1000);
+		}
 	});
 }
 
