@@ -121,6 +121,7 @@ function generateTable(data){
 	    			+'<td class="action" colspan="2">'
 	    				+'<b>ISBN 13</b>: <span class="isbn">'+data[i].isbn+'</span><br>'
 	    				+'<b>Price</b>: <span class="price">'+data[i].price+'</span><br>'
+	    				+'<b>Bookbyte Price</b>: <span class="bookbytePrice">'+data[i].bookbytePrice+'</span><br>'
 	    				+'<b>Seller</b>: <span class="seller">'+data[i].seller+'</span><br>'
 		    			+'<button type="button" class="btn btn-primary btn-xs" data-id="'+i+'">Check</button><br>'
 		    			+'<button type="button" class="btn btn-success btn-xs" data-id="'+i+'">Save to Server</button>'
@@ -161,6 +162,9 @@ function scrapingPrice(data){
 	var settings = getSetting();
 	var i = data["i"];
 	var site = link.match(/\w+\.com/g);
+	var dataOptions = { key: "dataBook" };
+	var dataBook = getData(dataOptions);
+	dataBook = JSON.parse(dataBook);
 	var options = {
 		url: link,
 		type: "GET"
@@ -193,6 +197,12 @@ function scrapingPrice(data){
 			var currentPrice = prices.eq(0).text().match(/\d|\./g).join("");
 			var shippingPrice = prices.eq(1).text().match(/\d|\./g).join("");
 			price = (+currentPrice) + (+shippingPrice);
+			$(".price", tr).text('$'+price);
+			$(".seller", tr).text(seller);
+			dataBook[i]["price"] = price;
+			dataBook[i]["seller"] = seller;
+			dataOptions["value"] = dataBook;
+			saveData(dataOptions);
 		}else{
 			remLoading();
 			return alert("Code scrape for "+site+" scrape not supported! Please contact developer.");
@@ -213,28 +223,38 @@ function scrapingPrice(data){
 				alert("("+site+") $"+price+" | seller: "+seller+" | (bookbyte.com) ERROR:"+err);
 				var priceBookbyte = "ERROR:"+err;
             }else{
-	            var priceBookbyte = "$" + $("table.gvItemsBuyback table", html).eq(0)
+            	var note = jQuery("table.gvItemsBuyback table").eq(0)
 	                .find("td div span").text()
-	                .split("$")[1];
-				remLoading();
-				var descriptionPrice = "("+site+") $"+price+" | (bookbyte.com) "+priceBookbyte;
-				if(price < (+priceBookbyte)){
-					alert(descriptionPrice+" | the price is lowest then bookbyte!");
-				}else{
-					alert(descriptionPrice+" | the price is more expensive then bookbyte!");
+	                .split("$")[0];
+	            if(note){
+					remLoading();
+					alert("("+site+") $"+price+" | seller: "+seller+" | (bookbyte.com) "+note);
+					var priceBookbyte = note;
+					var optionsCheck = {
+						html : html,
+						isbn : dataBook.isbn
+					};
+					var idTable = checkISBN(optionsCheck);
+					chrome.tabs.create({'url': 'https://www.bookbyte.com/buyback2.aspx?removeBook='+idTable }, function(tab) {
+					  // Tab opened.
+					});
+	            }else{
+		            var priceBookbyte = "$" + $("table.gvItemsBuyback table", html).eq(0)
+		                .find("td div span").text()
+		                .split("$")[1];
+					remLoading();
+					var descriptionPrice = "("+site+") $"+price+" | (bookbyte.com) "+priceBookbyte;
+					if(price < (+priceBookbyte)){
+						alert(descriptionPrice+" | the price is lowest then bookbyte!");
+					}else{
+						alert(descriptionPrice+" | the price is more expensive then bookbyte!");
+					}
 				}
 			}
-			var allPrice = "("+site+") $"+price+" | (bookbyte.com) "+priceBookbyte;
-			$(".price", tr).text(allPrice);
-			$(".seller", tr).text(seller);
-			var options = { key: "dataBook" };
-			var data = getData(options);
-			data = JSON.parse(data);
-			data[i]["price"] = allPrice;
-			data[i]["seller"] = seller;
-			options["value"] = data;
-			saveData(options);
-			console.log(allPrice);
+			$(".bookbytePrice", tr).text(priceBookbyte);
+			data[i]["bookbytePrice"] = priceBookbyte;
+			dataOptions["value"] = data;
+			saveData(dataOptions);
 		})
 		.catch(function(err){
 			remLoading();
@@ -245,6 +265,22 @@ function scrapingPrice(data){
 		remLoading();
 		console.log(err);
 	})
+}
+
+function checkISBN(options){
+	var html = options["html"];
+	var numTable = false;
+	$("table.gvItemsBuyback>tbody>tr>td>table", html).each(function(j,h){
+		$(h).find("td div strong").parent().each(function(i, b){ 
+			var num = jQuery(b).text().split(":")[1].trim();
+			if(num==options["isbn"]){
+				numTable = num;
+				return false;
+			}
+		});
+		if(numTable){ return false; }
+	});
+	return numTable;
 }
 
 function saveData(data){

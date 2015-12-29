@@ -15,10 +15,12 @@
         "http://flippiness.com/*", 
         "http://ebay.com/*", 
         "http://amazon.com/*", 
+        "http://www.bookbyte.com/*", 
         "http://chegg.com/*", 
         "https://flippiness.com/*", 
         "https://ebay.com/*", 
         "https://amazon.com/*", 
+        "https://www.bookbyte.com/*", 
         "https://chegg.com/*"
       ],
       "js": ["jquery.min.js", "scrape.js"]

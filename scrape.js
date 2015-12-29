@@ -18,6 +18,57 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
     }
 });
 
+var get = queryString();
+if(get["removeBook"]){
+	var options = {
+		id: get["removeBook"]
+	};
+	remBookbyte(options);
+}
+
+var theForm = document.forms['aspnetForm'];
+if (!theForm) {
+    theForm = document.aspnetForm;
+}
+
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
+    }
+}
+
+// remove book from buyback2.aspx
+function remBookbyte(options){
+	jQuery(document).ready(function($){
+		var id = options["id"];
+		$('#aspnetForm').attr("action", "buyback2.aspx");
+		setTimeout(function(){
+			eval(jQuery("table.gvItemsBuyback>tbody>tr>td>table").eq(id).find(".buybackRemoveWrapper a").attr("href"));
+		}, 1000);
+	});
+}
+
+// http://stackoverflow.com/questions/979975/how-to-get-the-value-from-the-url-parameter
+function queryString(){
+  	var query_string = {};
+  	var query = window.location.search.substring(1);
+  	var vars = query.split("&");
+  	for (var i=0;i<vars.length;i++) {
+    	var pair = vars[i].split("=");
+    	if (typeof query_string[pair[0]] === "undefined") {
+      		query_string[pair[0]] = decodeURIComponent(pair[1]);
+    	} else if (typeof query_string[pair[0]] === "string") {
+	      	var arr = [ query_string[pair[0]],decodeURIComponent(pair[1]) ];
+	      	query_string[pair[0]] = arr;
+    	} else {
+	      	query_string[pair[0]].push(decodeURIComponent(pair[1]));
+	    }
+  	} 
+    return query_string;
+};
+
 function getList(i, cb){
 	jQuery(document).ready(function($){
 		var list = $('.new-table-row');
@@ -58,6 +109,7 @@ function getList(i, cb){
 						bookbyteLink : bookbyteLink,
 						status : "new Scrape",
 						price : "-",
+						bookbytePrice : "-",
 						seller : "-"
 					};
 					resolve(data);
