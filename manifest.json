@@ -25,7 +25,6 @@
       ],
       "js": ["jquery.min.js", "scrape.js"]
     }],
-  "options_page": "options.html",
   "browser_action": {
     "default_icon": "images/flip.png",
     "default_popup": "popup.html"
