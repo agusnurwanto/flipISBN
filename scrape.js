@@ -21,7 +21,8 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 var get = queryString();
 if(get["removeBook"]){
 	var options = {
-		id: get["removeBook"]
+		id: get["removeBook"],
+		isbnRemove: get["isbnRemove"]
 	};
 	remBookbyte(options);
 }
@@ -43,7 +44,7 @@ function __doPostBack(eventTarget, eventArgument) {
 function remBookbyte(options){
 	jQuery(document).ready(function($){
 		var id = options["id"];
-		$('#aspnetForm').attr("action", "buyback2.aspx");
+		$('#aspnetForm').attr("action", "buyback2.aspx?isbnRemove="+options["isbnRemove"]);
 		var link = $("table.gvItemsBuyback>tbody>tr>td>table").eq(id).find(".buybackRemoveWrapper a").attr("href");
 		console.log(link);
 		if(link){

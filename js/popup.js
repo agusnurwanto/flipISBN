@@ -178,15 +178,20 @@ function scrapingPrice(data){
   			.replace(/<script[^>]*>/g,""));
 		if(link.indexOf("ebay.com") != "-1"){
 			var seller = $(".red", html).eq(0).parent().parent().next().next().next().text();
-			var error = $('table tr td b').text();
-			if(error){
-				remLoading();
-				return alert("ERROR: "+error);
-			}
 			var prices = $(".red", html);
-			var currentPrice = prices.eq(0).text().match(/\d|\./g).join("");
-			var shippingPrice = prices.eq(1).text().match(/\d|\./g).join("");
-			price = (+currentPrice) + (+shippingPrice);
+			if(prices.eq(1).text()){
+				var currentPrice = prices.eq(0).text().match(/\d|\./g).join("");
+				var shippingPrice = prices.eq(1).text().match(/\d|\./g).join("");
+				price = (+currentPrice) + (+shippingPrice);
+			}else{
+				var err = "ERROR: " + $("table td b", html).text();
+				$(".price", tr).text(err);
+				dataBook[i]["price"] = err;
+				dataOptions["value"] = dataBook;
+				saveData(dataOptions);
+				remLoading();
+				return alert(err);
+			}
 		}else if(link.indexOf("amazon.com") != "-1"){
 			var seller = $('.accordion-row-content .a-spacing-mini .a-link-normal', html).eq(0).text();
 			var price = $(".olp-padding-right .a-color-price", html).eq(0).text().match(/\d|\./g).join("");
@@ -215,8 +220,10 @@ function scrapingPrice(data){
 		dataBook[i]["seller"] = seller;
 		dataOptions["value"] = dataBook;
 		saveData(dataOptions);
+		var url = "https://isbntool-agusnurwanto.rhcloud.com/ajaxFlipLink.php?getPrice=true&url="
+			+encodeURIComponent(bookbyteLink);
 		var options = {
-			url: bookbyteLink,
+			url: url,
 			type: "GET"
 		}
 		ajaxSend(options)
@@ -227,6 +234,7 @@ function scrapingPrice(data){
 	  			.replace(/<link[^>]*>/g,"")
 	  			.replace(/<script[^>]*>/g,""));
 			var optionsCheck = {
+				res : res,
 				html : html,
 				isbn : dataBook[i]["isbn"]
 			};
@@ -243,7 +251,7 @@ function scrapingPrice(data){
 					remLoading();
 					alert("("+site+") $"+price+" | seller: "+seller+" | (bookbyte.com) "+note);
 					var priceBookbyte = note;
-					idTable = checkISBN(optionsCheck);
+					// idTable = true;
 	            }else{
 		            var priceBookbyte = $("table.gvItemsBuyback table", html).eq(0)
 		                .find("td div span").text()
@@ -251,11 +259,18 @@ function scrapingPrice(data){
 					remLoading();
 					var descriptionPrice = "("+site+") $"+price+" | (bookbyte.com) $"+priceBookbyte;
 					if(price < (+priceBookbyte)){
-						alert(descriptionPrice+" | the price is lowest then bookbyte!");
+						var options = {
+							url: bookbyteLink,
+							type: "GET"
+						}
+						ajaxSend(options)
+							.then(function(res){
+								alert(descriptionPrice+" | the price is lowest then bookbyte! | SUCCESS: the book add to cart");
+							});
 					}else{
 						alert(descriptionPrice+" | the price is more expensive then bookbyte!");
 						optionsCheck["more_expensive"] = true;
-						idTable = checkISBN(optionsCheck);
+						// idTable = true;
 					}
 				}
 			}
@@ -264,9 +279,10 @@ function scrapingPrice(data){
 			dataOptions["value"] = dataBook;
 			saveData(dataOptions);
 			if(idTable){
+				// remBook(optionsCheck);
 				chrome.tabs.create({
-					'url': 'https://www.bookbyte.com/buyback2.aspx?removeBook='+idTable
-					+'&isbn='+dataBook[i]["isbn"] }, 
+					'url': 'https://www.bookbyte.com/buyback2.aspx?removeBook=0'
+					+'&isbnRemove='+dataBook[i]["isbn"] }, 
 					function(tab) {
 				  // Tab opened.
 				});
@@ -283,30 +299,57 @@ function scrapingPrice(data){
 	})
 }
 
-function checkISBN(options){
+function remBook(options){
 	var html = options["html"];
-	var numTable = false;
-	$("table.gvItemsBuyback>tbody>tr>td>table", html).each(function(j,h){
-		$(h).find("td div strong").parent().each(function(i, b){ 
-			var num = jQuery(b).text().split(":")[1].trim();
-			if(num==options["isbn"]){
-				numTable = j;
-				return false;
-			}
-		});
-		if(numTable){ return false; }
+	var param = {};
+	$("input", html).each(function(i, b){
+		var input = $(b);
+		param[encodeURIComponent(input.attr("name"))] = encodeURIComponent(input.val());
 	});
-	if(!numTable && options["more_expensive"]){
-		$("table.gvItemsBuyback>tbody>tr>td>table", html).eq(0).find("td").eq(4).find("div div div div").each(function(j,h){
-			var num = jQuery(h).text().split(":")[1].trim();
-			console.log(num, options["isbn"]);
-			if(num==options["isbn"]){
-				numTable = j;
-				return false;
-			}
-		})
-	}
-	return numTable;
+	$("select", html).each(function(i, b){
+		var select = $(b);
+		param[encodeURIComponent(select.attr("name"))] = select.val();
+	});
+	param["__EVENTTARGET"] = encodeURIComponent($("table.gvItemsBuyback>tbody>tr>td>table", html).eq(0)
+		.find(".buybackRemoveWrapper a").attr("href")
+		.split("'")[1]);
+	var combineScript = options["res"]
+		.match(/CombineScripts.axd[^"]*/g)[0];
+	$.ajax({
+		type: "GET",
+		url: "https://www.bookbyte.com/"+combineScript,
+	});
+	param["ctl00_ScriptManager1_HiddenField"] = combineScript
+		.match(/_TSM_CombinedScripts_=[^"]*/g)[0]
+		.split("=")[1];
+	delete param["undefined"];
+	// delete param["__EVENTVALIDATION"];
+	// delete param["__EVENTTARGET"];
+	// delete param["__VIEWSTATE"];
+	param["hiddenInputToUpdateATBuffer_CommonToolkitScripts"] = "1";
+	param[encodeURIComponent("ctl00$Header1$rblType")] = "0";
+	param = decodeURIComponent($.param(param)).replace(/\+/g,"%2B");
+	$.ajax({
+	    type: "POST",
+	    url: "https://www.bookbyte.com/buyback2.aspx",
+	    data: param,
+	    headers: { 
+	    	'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+	    	'Accept-Encoding': 'gzip, deflate',
+	    	'Accept-Language': 'en-US,en;q=0.8',
+	    	'Cache-Control': 'max-age=0',
+	    	'Connection': 'keep-alive',
+	    	'Content-Type': 'application/x-www-form-urlencoded',
+	    	'Host': 'www.bookbyte.com',
+	    	'HTTPS': '1',
+	    	'Origin': 'https://www.bookbyte.com',
+	    	'Referer': 'https://www.bookbyte.com/buyback2.aspx',
+	    	'User-Agent': 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36'
+	    },
+	    success: function(data) {
+	        // console.log(data);
+	    }
+	});
 }
 
 function saveData(data){
