@@ -244,7 +244,7 @@ function scrapingPrice(data){
 				alert("("+site+") $"+price+" | seller: "+seller+" | (bookbyte.com) ERROR:"+err);
 				var priceBookbyte = "ERROR:"+err;
             }else{
-            	var note = jQuery("table.gvItemsBuyback table").eq(0)
+            	var note = $("table.gvItemsBuyback table", html).eq(0)
 	                .find("td div span").text()
 	                .split("$")[0];
 	            if(note){
@@ -274,8 +274,11 @@ function scrapingPrice(data){
 					}
 				}
 			}
-			$(".bookbytePrice", tr).text("$"+priceBookbyte);
-			dataBook[i]["bookbytePrice"] = "$"+priceBookbyte;
+			if(!err && !note){
+				priceBookbyte = "$"+priceBookbyte;
+			}
+			$(".bookbytePrice", tr).text(priceBookbyte);
+			dataBook[i]["bookbytePrice"] = priceBookbyte;
 			dataOptions["value"] = dataBook;
 			saveData(dataOptions);
 			if(idTable){
