@@ -194,7 +194,7 @@ function scrapingPrice(data){
 			}
 		}else if(link.indexOf("amazon.com") != "-1"){
 			var seller = $('.accordion-row-content .a-spacing-mini .a-link-normal', html).eq(0).text();
-			var price = $(".olp-padding-right .a-color-price", html).eq(0).text().match(/\d|\./g).join("");
+			var price = $(".olp-padding-right .a-color-price", html).eq(1).text().match(/\d|\./g).join("");
 		}else if(link.indexOf("chegg.com") != "-1"){
 			var seller = $('.author-container a', html).text();
 			var price = $('.buy_radio_button').parent().find(".pricebox-price-label.pricebox-right").eq(1).text().match(/\d|\./g).join("");
