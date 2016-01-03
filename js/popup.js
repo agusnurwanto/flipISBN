@@ -502,7 +502,7 @@ function resetSetting(event){
 		listSite: [
 			"ebay.com", 
 			"amazon.com", 
-			"chegg.com"
+			"cggtrx.com"
 		],
 		blackList: [
 			"big4northeast", 
