@@ -31,11 +31,58 @@ $('#refresh-data-book').on("click", function(e){
 	refreshSetting(e);
 });
 
+$('#scrape-all-data-book').on("click", function(e){
+	scrapeAll(e);
+});
+
 $('#bookbyte').on("click", function(e){
 	chrome.tabs.create({'url': 'https://www.bookbyte.com/buyback2.aspx' }, function(tab) {
 	  // Tab opened.
 	});
 });
+
+function scrapeAll(event){
+	event.preventDefault();
+	setLoading();
+	var promises = [];
+	var data = $('table.data-table tbody tr');
+	data.each(function(i,b){
+		(function(i){
+			promises[i] = new Promise(function(resolve, reject){
+				var tr = $('table.data-table tbody #tr'+i);
+				var link = $('.current-link', tr).text();
+				var bookbyteLink = $('.bookbyte-link', tr).text();
+				var options = {
+					url : link,
+					bookbyteLink : bookbyteLink,
+					tr: tr,
+					i: i,
+					resolve: resolve
+				}
+				return scrapingPrice(options);
+			})
+			.catch(function(err){
+				console.log(err);
+				return Promise.reject();
+			})
+		})(i);
+	});
+	Promise.all(promises)
+	.then(function(res){
+		alert("FINISH check all data!");
+	})
+	.catch(function(err){
+		console.log(err);
+		alert("FINISH check all data! with ERROR.");
+	})
+}
+
+function afterScrape(options){
+	if(options && options["resolve"]){
+		return options.resolve();
+	}
+	remLoading();
+}
 
 function htmlLoading(){
 	var loading = '<div id="block"></div>'
@@ -191,7 +238,7 @@ function scrapingPrice(data){
 				dataBook[i]["price"] = err;
 				dataOptions["value"] = dataBook;
 				saveData(dataOptions);
-				remLoading();
+				afterScrape(data);
 				return alert(err);
 			}
 		}else if(link.indexOf("amazon.com") != "-1"){
@@ -200,7 +247,7 @@ function scrapingPrice(data){
 		}else if(link.indexOf("cggtrx.com") != "-1"){
 			return scrapeChegg(data);
 		}else{
-			remLoading();
+			afterScrape(data);
 			return alert("Code scrape for "+site+" scrape not supported! Please contact developer.");
 		}
 		data.price = price;
@@ -224,12 +271,12 @@ function checkPriceSeller(options){
 	var dataOptions = options["dataOptions"];
 	var settings = getSetting();
 	if(settings.blackList.indexOf(seller) != "-1"){
-		remLoading();
+		afterScrape(data);
 		return alert("seller: "+seller+" in blackList!");
 	}
 	if(settings.blackListRecycle=="1"){
 		if(seller.indexOf("recycle") != "-1"){
-			remLoading();
+			afterScrape(data);
 			return alert("seller: "+seller+" in blackList! contain recycle.");
 		}
 	}
@@ -263,10 +310,13 @@ function scrapeChegg(options){
 		try{
 			token = res.split("C.global.csrfToken = '")[1].split("'")[0];
 		}catch(err){
+			afterScrape(options);
 			console.log(err);
 		}
-		if(!token)
+		if(!token){
+			afterScrape(options);
 			return alert("Token chegg not found!");
+		}
 		var getInfo = 'http://www.chegg.com/_ajax/federated/search?'
 			+'query='+options["isbn"]
 			+'&search_data=%7B%22chgsec%22%3A%22searchsection%22%2C%22chgsubcomp%22%3A%22serp%22%2C%22profile%22%3A%22textbooks-srp%22%2C%22page-number%22%3A%221%22%7D'
@@ -280,6 +330,7 @@ function scrapeChegg(options){
 				var urlCheeg = res.textbooks.responseContent.docs[0].url;
 			}catch(err){
 				console.log(err);
+				afterScrape(options);
 				return alert("ISBN number not found in chegg.com!");
 			}
 			ajaxSend({
@@ -296,6 +347,7 @@ function scrapeChegg(options){
 					var dataPrice = JSON.parse(res.split('"Buy","used":')[1].split(',"isbn"')[0]);
 				}catch(err){
 					console.log(err);
+					afterScrape(options);
 					return alert("Price not found!");
 				}
 				var price = dataPrice.price;
@@ -307,6 +359,7 @@ function scrapeChegg(options){
 		})
 	})
 	.catch(function(err){
+		afterScrape(options);
 		console.log(err);
 	})
 }
@@ -381,6 +434,7 @@ function getDataFromBookbyte(options){
 		dataBook[i]["bookbytePrice"] = priceBookbyte;
 		dataOptions["value"] = dataBook;
 		saveData(dataOptions);
+		afterScrape(options);
 		if(idTable){
 			// remBook(optionsCheck);
 			chrome.tabs.create({
