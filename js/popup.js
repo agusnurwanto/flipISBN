@@ -159,12 +159,14 @@ function scrapingPrice(data){
 	var link = data["url"];
 	var bookbyteLink = data["bookbyteLink"];
 	var tr = data["tr"];
-	var settings = getSetting();
 	var i = data["i"];
 	var site = link.match(/\w+\.com/g);
+	data["site"] = site;
 	var dataOptions = { key: "dataBook" };
+	data["dataOptions"] = dataOptions;
 	var dataBook = getData(dataOptions);
 	dataBook = JSON.parse(dataBook);
+	data["dataBook"] = dataBook;
 	var options = {
 		url: link,
 		type: "GET"
@@ -195,106 +197,199 @@ function scrapingPrice(data){
 		}else if(link.indexOf("amazon.com") != "-1"){
 			var seller = $('.accordion-row-content .a-spacing-mini .a-link-normal', html).eq(0).text();
 			var price = $(".olp-padding-right .a-color-price", html).eq(1).text().match(/\d|\./g).join("");
-		}else if(link.indexOf("chegg.com") != "-1"){
-			var seller = $('.author-container a', html).text();
-			var price = $('.buy_radio_button').parent().find(".pricebox-price-label.pricebox-right").eq(1).text().match(/\d|\./g).join("");
+		}else if(link.indexOf("cggtrx.com") != "-1"){
+			return scrapeChegg(data);
 		}else{
 			remLoading();
 			return alert("Code scrape for "+site+" scrape not supported! Please contact developer.");
 		}
+		data.price = price;
+		data.seller = seller;
+		return checkPriceSeller(data);
+	})
+	.catch(function(err){
+		remLoading();
+		console.log(err);
+	})
+}
 
-		// seller validation
-		if(settings.blackList.indexOf(seller) != "-1"){
+// seller validation
+function checkPriceSeller(options){
+	var data = options;
+	var price = options["price"];
+	var seller = options["seller"];
+	var tr = options["tr"];
+	var dataBook = options["dataBook"];
+	var i = options["i"]
+	var dataOptions = options["dataOptions"];
+	var settings = getSetting();
+	if(settings.blackList.indexOf(seller) != "-1"){
+		remLoading();
+		return alert("seller: "+seller+" in blackList!");
+	}
+	if(settings.blackListRecycle=="1"){
+		if(seller.indexOf("recycle") != "-1"){
 			remLoading();
-			return alert("seller: "+seller+" in blackList!");
+			return alert("seller: "+seller+" in blackList! contain recycle.");
 		}
-		if(settings.blackListRecycle=="1"){
-			if(seller.indexOf("recycle") != "-1"){
-				remLoading();
-				return alert("seller: "+seller+" in blackList! contain recycle.");
-			}
+	}
+	$(".price", tr).text('$'+price);
+	$(".seller", tr).text(seller);
+	dataBook[i]["price"] = '$'+price;
+	dataBook[i]["seller"] = seller;
+	dataOptions["value"] = dataBook;
+	saveData(dataOptions);
+	return getDataFromBookbyte(data);
+}
+
+/*
+you can test with
+scrapeChegg({
+	"isbn": 9780072433937,
+	i:0,
+	dataOptions: {key: "dataBook"},
+	dataBook: JSON.parse(getData({key: "dataBook"})),
+	bookbyteLink: "https://www.bookbyte.com/buyback2.aspx?isbns=9780072433937"
+})
+*/
+function scrapeChegg(options){
+	var data = {
+		url: 'http://www.chegg.com/search/'+options["isbn"],
+		type: "GET"
+	}
+	ajaxSend(data)
+	.then(function(res){
+		var token = false;
+		try{
+			token = res.split("C.global.csrfToken = '")[1].split("'")[0];
+		}catch(err){
+			console.log(err);
 		}
-		$(".price", tr).text('$'+price);
-		$(".seller", tr).text(seller);
-		dataBook[i]["price"] = '$'+price;
-		dataBook[i]["seller"] = seller;
-		dataOptions["value"] = dataBook;
-		saveData(dataOptions);
-		var url = "https://isbntool-agusnurwanto.rhcloud.com/ajaxFlipLink.php?getPrice=true&url="
-			+encodeURIComponent(bookbyteLink);
-		var options = {
-			url: url,
+		if(!token)
+			return alert("Token chegg not found!");
+		var getInfo = 'http://www.chegg.com/_ajax/federated/search?'
+			+'query='+options["isbn"]
+			+'&search_data=%7B%22chgsec%22%3A%22searchsection%22%2C%22chgsubcomp%22%3A%22serp%22%2C%22profile%22%3A%22textbooks-srp%22%2C%22page-number%22%3A%221%22%7D'
+			+'&token='+token;
+		ajaxSend({
+			url: getInfo,
 			type: "GET"
-		}
-		ajaxSend(options)
+		})
 		.then(function(res){
-			var idTable = false;
-			var html = $.parseHTML(res
-	  			.replace(/<img[^>]*>/g,"")
-	  			.replace(/<link[^>]*>/g,"")
-	  			.replace(/<script[^>]*>/g,""));
-			var optionsCheck = {
-				res : res,
-				html : html,
-				isbn : dataBook[i]["isbn"]
-			};
-            var err = $("#ctl00_ContentPlaceHolder1_trSpecialMessage", html).text().trim();
-            if(err){
+			try{
+				var urlCheeg = res.textbooks.responseContent.docs[0].url;
+			}catch(err){
+				console.log(err);
+				return alert("ISBN number not found in chegg.com!");
+			}
+			ajaxSend({
+				url: urlCheeg,
+				type: "GET"
+			})
+			.then(function(res){
+				var html = $.parseHTML(res
+		  			.replace(/<img[^>]*>/g,"")
+		  			.replace(/<link[^>]*>/g,"")
+		  			.replace(/<script[^>]*>/g,""));
+				var seller = $('.author-container a', html).text();
+				try{
+					var dataPrice = JSON.parse(res.split('"Buy","used":')[1].split(',"isbn"')[0]);
+				}catch(err){
+					console.log(err);
+					return alert("Price not found!");
+				}
+				var price = dataPrice.price;
+				options.price = price;
+				options.seller = seller;
+				options.site = "chegg.com";
+				return checkPriceSeller(options);
+			})
+		})
+	})
+	.catch(function(err){
+		console.log(err);
+	})
+}
+
+function getDataFromBookbyte(options){
+	var bookbyteLink = options["bookbyteLink"];
+	var dataBook = options["dataBook"];
+	var dataOptions = options["dataOptions"];
+	var i = options["i"];
+	var site = options["site"];
+	var price = options["price"];
+	var seller = options["seller"];
+	var tr = options["tr"];
+	var url = "https://isbntool-agusnurwanto.rhcloud.com/ajaxFlipLink.php?getPrice=true&url="
+		+encodeURIComponent(bookbyteLink);
+	var options = {
+		url: url,
+		type: "GET"
+	}
+	ajaxSend(options)
+	.then(function(res){
+		var idTable = false;
+		var html = $.parseHTML(res
+  			.replace(/<img[^>]*>/g,"")
+  			.replace(/<link[^>]*>/g,"")
+  			.replace(/<script[^>]*>/g,""));
+		var optionsCheck = {
+			res : res,
+			html : html,
+			isbn : dataBook[i]["isbn"]
+		};
+        var err = $("#ctl00_ContentPlaceHolder1_trSpecialMessage", html).text().trim();
+        if(err){
+			remLoading();
+			alert("("+site+") $"+price+" | seller: "+seller+" | (bookbyte.com) ERROR:"+err);
+			var priceBookbyte = "ERROR:"+err;
+        }else{
+        	var note = $("table.gvItemsBuyback table", html).eq(0)
+                .find("td div span").text()
+                .split("$")[0];
+            if(note){
 				remLoading();
-				alert("("+site+") $"+price+" | seller: "+seller+" | (bookbyte.com) ERROR:"+err);
-				var priceBookbyte = "ERROR:"+err;
+				alert("("+site+") $"+price+" | seller: "+seller+" | (bookbyte.com) "+note);
+				var priceBookbyte = note;
+				// idTable = true;
             }else{
-            	var note = $("table.gvItemsBuyback table", html).eq(0)
+	            var priceBookbyte = $("table.gvItemsBuyback table", html).eq(0)
 	                .find("td div span").text()
-	                .split("$")[0];
-	            if(note){
-					remLoading();
-					alert("("+site+") $"+price+" | seller: "+seller+" | (bookbyte.com) "+note);
-					var priceBookbyte = note;
-					// idTable = true;
-	            }else{
-		            var priceBookbyte = $("table.gvItemsBuyback table", html).eq(0)
-		                .find("td div span").text()
-		                .split("$")[1];
-					remLoading();
-					var descriptionPrice = "("+site+") $"+price+" | (bookbyte.com) $"+priceBookbyte;
-					if(price < (+priceBookbyte)){
-						var options = {
-							url: bookbyteLink,
-							type: "GET"
-						}
-						ajaxSend(options)
-							.then(function(res){
-								alert(descriptionPrice+" | the price is lowest then bookbyte! | SUCCESS: the book add to cart");
-							});
-					}else{
-						alert(descriptionPrice+" | the price is more expensive then bookbyte!");
-						optionsCheck["more_expensive"] = true;
-						// idTable = true;
+	                .split("$")[1];
+				remLoading();
+				var descriptionPrice = "("+site+") $"+price+" | (bookbyte.com) $"+priceBookbyte;
+				if(price < (+priceBookbyte)){
+					var options = {
+						url: bookbyteLink,
+						type: "GET"
 					}
+					ajaxSend(options)
+						.then(function(res){
+							alert(descriptionPrice+" | the price is lowest then bookbyte! | SUCCESS: the book add to cart");
+						});
+				}else{
+					alert(descriptionPrice+" | the price is more expensive then bookbyte!");
+					optionsCheck["more_expensive"] = true;
+					// idTable = true;
 				}
 			}
-			if(!err && !note){
-				priceBookbyte = "$"+priceBookbyte;
-			}
-			$(".bookbytePrice", tr).text(priceBookbyte);
-			dataBook[i]["bookbytePrice"] = priceBookbyte;
-			dataOptions["value"] = dataBook;
-			saveData(dataOptions);
-			if(idTable){
-				// remBook(optionsCheck);
-				chrome.tabs.create({
-					'url': 'https://www.bookbyte.com/buyback2.aspx?removeBook=0'
-					+'&isbnRemove='+dataBook[i]["isbn"] }, 
-					function(tab) {
-				  // Tab opened.
-				});
-			}
-		})
-		.catch(function(err){
-			remLoading();
-			console.log(err);
-		})
+		}
+		if(!err && !note){
+			priceBookbyte = "$"+priceBookbyte;
+		}
+		$(".bookbytePrice", tr).text(priceBookbyte);
+		dataBook[i]["bookbytePrice"] = priceBookbyte;
+		dataOptions["value"] = dataBook;
+		saveData(dataOptions);
+		if(idTable){
+			// remBook(optionsCheck);
+			chrome.tabs.create({
+				'url': 'https://www.bookbyte.com/buyback2.aspx?removeBook=0'
+				+'&isbnRemove='+dataBook[i]["isbn"] }, 
+				function(tab) {
+			  // Tab opened.
+			});
+		}
 	})
 	.catch(function(err){
 		remLoading();
@@ -480,6 +575,7 @@ function ajaxSend(options){
 	return new Promise(function(resolve, reject){
 		var data = {
 	        url : options["url"],
+	        timeout: (600 * 1000),
 	        success: function(res){
 	        	console.log("success send ajax to "+options["url"]);
 	        	resolve(res);
