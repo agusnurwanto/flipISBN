@@ -383,6 +383,7 @@ function generatePrice(price){
 }
 
 function getDataFromBookbyte(options){
+	var settings = getSetting();
 	var bookbyteLink = options["bookbyteLink"];
 	var dataBook = options["dataBook"];
 	var dataOptions = options["dataOptions"];
@@ -391,8 +392,11 @@ function getDataFromBookbyte(options){
 	var price = options["price"];
 	var seller = options["seller"];
 	var tr = options["tr"];
-	var url = "https://isbntool-agusnurwanto.rhcloud.com/ajaxFlipLink.php?getPrice=true&url="
+	var url = bookbyteLink;
+	if(settings.thirdPartyServer!="1"){
+		url = "https://isbntool-agusnurwanto.rhcloud.com/ajaxFlipLink.php?getPrice=true&url="
 		+encodeURIComponent(bookbyteLink);
+	}
 	var options = {
 		url: url,
 		type: "GET"
@@ -443,7 +447,9 @@ function getDataFromBookbyte(options){
 					alert(descriptionPrice+" | the price is more expensive then bookbyte!");
 					optionsCheck["more_expensive"] = true;
 					$("#tr"+i).attr("class", "error");
-					// idTable = true;
+					if(settings.thirdPartyServer=="1"){
+						idTable == true;
+					}
 				}
 			}
 		}
@@ -568,6 +574,11 @@ function settingTab(){
 		$("#black-list-recycle").prop("checked",false);
 	}
 	$("#shipping-cost").val(data.shippingCost);
+	if(data["thirdPartyServer"]=="1"){
+		$("#third-party-server").prop("checked",true);
+	}else{
+		$("#third-party-server").prop("checked",false);
+	}
 	return;
 }
 
@@ -595,6 +606,7 @@ function resetSetting(event){
 			"gus4577"
 		],
 		blackListRecycle: 1,
+		thirdPartyServer: 1,
 		shippingCost: "3.99"
 
 	};
@@ -621,12 +633,18 @@ function saveSetting(event){
 		blackListRecycle = 1;
 	}
 
+	var thirdPartyServer = 0;
+	if($('#third-party-server').is(':checked')==true){
+		thirdPartyServer = 1;
+	}
+
 	var shippingCost = $('#shipping-cost').val();
 	var data = {
 		listSite: listSite,
 		blackList: blackList,
 		blackListRecycle: blackListRecycle,
-		shippingCost: shippingCost
+		shippingCost: shippingCost,
+		thirdPartyServer: thirdPartyServer
 	};
 	alert("Save success!");
 	return localStorage.setItem("settingOptions", JSON.stringify(data));
@@ -642,7 +660,9 @@ function getSetting(){
 		data = {
 			listSite: listSite,
 			blackList: blackList,
-			blackListRecycle: $("#black-list-recycle").val()
+			blackListRecycle: $("#black-list-recycle").val(),
+			shippingCost: $("#shipping-cost").val(),
+			thirdPartyServer: $("#third-party-server").val()
 		};
 	}else{
 		data = JSON.parse(data);
@@ -660,6 +680,7 @@ function ajaxSend(options){
 	        	resolve(res);
 	        },
 	        error: function (jqXHR, textStatus, errorThrown){
+	        	remLoading();
 	            alert('Error adding / update data');
 	        }
 	    };
