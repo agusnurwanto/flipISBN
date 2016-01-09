@@ -263,7 +263,7 @@ function scrapingPrice(data){
 // seller validation
 function checkPriceSeller(options){
 	var data = options;
-	var price = options["price"];
+	var price = generatePrice(options["price"]);
 	var seller = options["seller"];
 	var tr = options["tr"];
 	var dataBook = options["dataBook"];
@@ -362,6 +362,14 @@ function scrapeChegg(options){
 		afterScrape(options);
 		console.log(err);
 	})
+}
+
+function generatePrice(price){
+	var settings = getSetting();
+	var shippingCost = settings.shippingCost;
+	var finalPrice = (+price)+(+shippingCost);
+	console.log("generatePrice "+price+" + "+shippingCost+" = "+finalPrice);
+	return finalPrice;
 }
 
 function getDataFromBookbyte(options){
@@ -547,6 +555,7 @@ function settingTab(){
 	}else{
 		$("#black-list-recycle").prop("checked",false);
 	}
+	$("#shipping-cost").val(data.shippingCost);
 	return;
 }
 
@@ -573,7 +582,8 @@ function resetSetting(event){
 			"campus_bookstore", 
 			"gus4577"
 		],
-		blackListRecycle: 1
+		blackListRecycle: 1,
+		shippingCost: "3.99"
 
 	};
 	alert("Reset setting success!");
@@ -598,10 +608,13 @@ function saveSetting(event){
 	if($('#black-list-recycle').is(':checked')==true){
 		blackListRecycle = 1;
 	}
+
+	var shippingCost = $('#shipping-cost').val();
 	var data = {
 		listSite: listSite,
 		blackList: blackList,
-		blackListRecycle: blackListRecycle
+		blackListRecycle: blackListRecycle,
+		shippingCost: shippingCost
 	};
 	alert("Save success!");
 	return localStorage.setItem("settingOptions", JSON.stringify(data));
