@@ -41,6 +41,10 @@ $('#bookbyte').on("click", function(e){
 	});
 });
 
+$('#newTab').on("click", function(e){
+	chrome.tabs.create({ url: window.location.href });
+});
+
 function scrapeAll(event){
 	event.preventDefault();
 	setLoading();
@@ -237,6 +241,7 @@ function scrapingPrice(data){
 				$(".price", tr).text(err);
 				dataBook[i]["price"] = err;
 				dataOptions["value"] = dataBook;
+				$("#tr"+i).attr("class", "error");
 				saveData(dataOptions);
 				afterScrape(data);
 				return alert(err);
@@ -272,11 +277,13 @@ function checkPriceSeller(options){
 	var settings = getSetting();
 	if(settings.blackList.indexOf(seller) != "-1"){
 		afterScrape(data);
+		$("#tr"+i).attr("class", "error");
 		return alert("seller: "+seller+" in blackList!");
 	}
 	if(settings.blackListRecycle=="1"){
 		if(seller.indexOf("recycle") != "-1"){
 			afterScrape(data);
+			$("#tr"+i).attr("class", "error");
 			return alert("seller: "+seller+" in blackList! contain recycle.");
 		}
 	}
@@ -315,6 +322,7 @@ function scrapeChegg(options){
 		}
 		if(!token){
 			afterScrape(options);
+			$("#tr"+i).attr("class", "error");
 			return alert("Token chegg not found!");
 		}
 		var getInfo = 'http://www.chegg.com/_ajax/federated/search?'
@@ -331,6 +339,7 @@ function scrapeChegg(options){
 			}catch(err){
 				console.log(err);
 				afterScrape(options);
+				$("#tr"+i).attr("class", "error");
 				return alert("ISBN number not found in chegg.com!");
 			}
 			ajaxSend({
@@ -348,6 +357,7 @@ function scrapeChegg(options){
 				}catch(err){
 					console.log(err);
 					afterScrape(options);
+					$("#tr"+i).attr("class", "error");
 					return alert("Price not found!");
 				}
 				var price = dataPrice.price;
@@ -426,11 +436,13 @@ function getDataFromBookbyte(options){
 					}
 					ajaxSend(options)
 						.then(function(res){
+							$("#tr"+i).attr("class", "success");
 							alert(descriptionPrice+" | the price is lowest then bookbyte! | SUCCESS: the book add to cart");
 						});
 				}else{
 					alert(descriptionPrice+" | the price is more expensive then bookbyte!");
 					optionsCheck["more_expensive"] = true;
+					$("#tr"+i).attr("class", "error");
 					// idTable = true;
 				}
 			}

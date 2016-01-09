@@ -53,3 +53,11 @@ td.link {
     to { transform: scale(1) rotate(360deg);}
 }
 /*end loading*/
+
+tr.error{
+    background: #FFE5E5;
+}
+
+tr.success{
+    background: #D5FFD2;
+}
