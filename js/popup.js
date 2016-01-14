@@ -45,6 +45,21 @@ $('#newTab').on("click", function(e){
 	chrome.tabs.create({ url: window.location.href });
 });
 
+$('#buyBook').on("click", function(e){
+	var data = $('table.data-table tbody tr');
+	var check = false;
+	data.each(function(i,b){
+		var tr = $('table.data-table tbody #tr'+i+'.success').html();
+		if(tr){
+			var link = $('.current-link', tr).text();
+			chrome.tabs.create({ url: link });
+		}
+	});
+	if(!check){
+		alert("There is no active links. Please check again!");
+	}
+});
+
 function scrapeAll(event){
 	event.preventDefault();
 	setLoading();
@@ -160,7 +175,7 @@ function generateTable(data){
     if(data){
     	for(var i in data){
     		trBody += ''
-    			+'<tr id="tr'+i+'">'
+    			+'<tr id="tr'+i+'" class="'+data[i].status+'">'
 	    			+'<td class="link">'
 	    				+'<a href="'+data[i].link+'" target="blank" title="Open link in new tab!">'
 	    					+'<span class="current-link">'+data[i].link+'</span>'
@@ -220,7 +235,8 @@ function scrapingPrice(data){
 	data["dataBook"] = dataBook;
 	var options = {
 		url: link,
-		type: "GET"
+		type: "GET",
+		options: data
 	}
 	ajaxSend(options)
 	.then(function(res){
@@ -240,8 +256,9 @@ function scrapingPrice(data){
 				var err = "ERROR: " + $("table td b", html).text();
 				$(".price", tr).text(err);
 				dataBook[i]["price"] = err;
+				dataBook[i]["status"] = "error_get_price";
 				dataOptions["value"] = dataBook;
-				$("#tr"+i).attr("class", "error");
+				$("#tr"+i).attr("class", "error_get_price");
 				saveData(dataOptions);
 				afterScrape(data);
 				return alert(err);
@@ -262,36 +279,48 @@ function scrapingPrice(data){
 	.catch(function(err){
 		remLoading();
 		console.log(err);
+		dataBook[i]["status"] = "error_get_price";
+		dataOptions["value"] = dataBook;
+		saveData(dataOptions);
+		$("#tr"+i).attr("class", "error_get_price");
 	})
 }
 
 // seller validation
 function checkPriceSeller(options){
 	var data = options;
-	var price = generatePrice(options["price"]);
+	if(options["url"].indexOf("ebay.com") == "-1"){
+		var price = generatePrice(options["price"]);
+	}else{
+		var price = options["price"];
+	}
 	var seller = options["seller"];
 	var tr = options["tr"];
 	var dataBook = options["dataBook"];
 	var i = options["i"]
 	var dataOptions = options["dataOptions"];
+	dataBook[i]["price"] = '$'+price;
+	dataBook[i]["seller"] = seller;
+	dataOptions["value"] = dataBook;
 	var settings = getSetting();
 	if(settings.blackList.indexOf(seller) != "-1"){
 		afterScrape(data);
+		dataOptions["value"][i]["status"] = "error_seller";
+		saveData(dataOptions);
 		$("#tr"+i).attr("class", "error");
 		return alert("seller: "+seller+" in blackList!");
 	}
 	if(settings.blackListRecycle=="1"){
 		if(seller.indexOf("recycle") != "-1"){
 			afterScrape(data);
+			dataOptions["value"][i]["status"] = "error_seller";
+			saveData(dataOptions);
 			$("#tr"+i).attr("class", "error");
 			return alert("seller: "+seller+" in blackList! contain recycle.");
 		}
 	}
 	$(".price", tr).text('$'+price);
 	$(".seller", tr).text(seller);
-	dataBook[i]["price"] = '$'+price;
-	dataBook[i]["seller"] = seller;
-	dataOptions["value"] = dataBook;
 	saveData(dataOptions);
 	return getDataFromBookbyte(data);
 }
@@ -307,6 +336,9 @@ scrapeChegg({
 })
 */
 function scrapeChegg(options){
+	var dataBook = options["dataBook"];
+	var i = options["i"]
+	var dataOptions = options["dataOptions"];
 	var data = {
 		url: 'http://www.chegg.com/search/'+options["isbn"],
 		type: "GET"
@@ -322,7 +354,10 @@ function scrapeChegg(options){
 		}
 		if(!token){
 			afterScrape(options);
-			$("#tr"+i).attr("class", "error");
+			$("#tr"+i).attr("class", "error_get_price");
+			dataBook[i]["status"] = "error_get_price";
+			dataOptions["value"] = dataBook;
+			saveData(dataOptions);
 			return alert("Token chegg not found!");
 		}
 		var getInfo = 'http://www.chegg.com/_ajax/federated/search?'
@@ -331,7 +366,8 @@ function scrapeChegg(options){
 			+'&token='+token;
 		ajaxSend({
 			url: getInfo,
-			type: "GET"
+			type: "GET",
+			options: options
 		})
 		.then(function(res){
 			try{
@@ -339,12 +375,16 @@ function scrapeChegg(options){
 			}catch(err){
 				console.log(err);
 				afterScrape(options);
-				$("#tr"+i).attr("class", "error");
+				$("#tr"+i).attr("class", "error_get_price");
+				dataBook[i]["status"] = "error_get_price";
+				dataOptions["value"] = dataBook;
+				saveData(dataOptions);
 				return alert("ISBN number not found in chegg.com!");
 			}
 			ajaxSend({
 				url: urlCheeg,
-				type: "GET"
+				type: "GET",
+				options: options
 			})
 			.then(function(res){
 				var html = $.parseHTML(res
@@ -357,7 +397,10 @@ function scrapeChegg(options){
 				}catch(err){
 					console.log(err);
 					afterScrape(options);
-					$("#tr"+i).attr("class", "error");
+					$("#tr"+i).attr("class", "error_get_price");
+					dataBook[i]["status"] = "error_get_price";
+					dataOptions["value"] = dataBook;
+					saveData(dataOptions);
 					return alert("Price not found!");
 				}
 				var price = dataPrice.price;
@@ -371,6 +414,10 @@ function scrapeChegg(options){
 	.catch(function(err){
 		afterScrape(options);
 		console.log(err);
+		$("#tr"+i).attr("class", "error_get_price");
+		dataBook[i]["status"] = "error_get_price";
+		dataOptions["value"] = dataBook;
+		saveData(dataOptions);
 	})
 }
 
@@ -397,13 +444,15 @@ function getDataFromBookbyte(options){
 		url = "https://isbntool-agusnurwanto.rhcloud.com/ajaxFlipLink.php?getPrice=true&url="
 		+encodeURIComponent(bookbyteLink);
 	}
-	var options = {
+	var data = {
 		url: url,
-		type: "GET"
+		type: "GET",
+		options: options
 	}
-	ajaxSend(options)
+	ajaxSend(data)
 	.then(function(res){
 		var idTable = false;
+		dataBook[i]["status"] = "error_bookBytePrice";
 		var html = $.parseHTML(res
   			.replace(/<img[^>]*>/g,"")
   			.replace(/<link[^>]*>/g,"")
@@ -416,6 +465,7 @@ function getDataFromBookbyte(options){
         var err = $("#ctl00_ContentPlaceHolder1_trSpecialMessage", html).text().trim();
         if(err){
 			remLoading();
+			$("#tr"+i).attr("class", "error_bookBytePrice");
 			alert("("+site+") $"+price+" | seller: "+seller+" | (bookbyte.com) ERROR:"+err);
 			var priceBookbyte = "ERROR:"+err;
         }else{
@@ -424,6 +474,7 @@ function getDataFromBookbyte(options){
                 .split("$")[0];
             if(note){
 				remLoading();
+				$("#tr"+i).attr("class", "error_bookBytePrice");
 				alert("("+site+") $"+price+" | seller: "+seller+" | (bookbyte.com) "+note);
 				var priceBookbyte = note;
 				// idTable = true;
@@ -434,19 +485,21 @@ function getDataFromBookbyte(options){
 				remLoading();
 				var descriptionPrice = "("+site+") $"+price+" | (bookbyte.com) $"+priceBookbyte;
 				if(price < (+priceBookbyte)){
-					var options = {
+					var data = {
 						url: bookbyteLink,
-						type: "GET"
+						type: "GET",
+						options: options
 					}
-					ajaxSend(options)
+					ajaxSend(data)
 						.then(function(res){
 							$("#tr"+i).attr("class", "success");
 							alert(descriptionPrice+" | the price is lowest then bookbyte! | SUCCESS: the book add to cart");
+							dataBook[i]["status"] = "success";
 						});
 				}else{
 					alert(descriptionPrice+" | the price is more expensive then bookbyte!");
 					optionsCheck["more_expensive"] = true;
-					$("#tr"+i).attr("class", "error");
+					$("#tr"+i).attr("class", "error_bookBytePrice");
 					if(settings.thirdPartyServer=="1"){
 						idTable == true;
 					}
@@ -474,6 +527,10 @@ function getDataFromBookbyte(options){
 	.catch(function(err){
 		remLoading();
 		console.log(err);
+		dataBook[i]["status"] = "error_bookBytePrice";
+		dataOptions["value"] = dataBook;
+		saveData(dataOptions);
+		$("#tr"+i).attr("class", "error_bookBytePrice");
 	})
 }
 
@@ -682,6 +739,15 @@ function ajaxSend(options){
 	        error: function (jqXHR, textStatus, errorThrown){
 	        	remLoading();
 	            alert('Error adding / update data');
+	            if(options["options"]){
+					var dataBook = options["options"]["dataBook"];
+					var dataOptions = options["options"]["dataOptions"];
+					var i = options["options"]["i"];
+					dataBook[i]["status"] = "error_ajax";
+					dataOptions["value"] = dataBook;
+					saveData(dataOptions);
+					$("#tr"+i).attr("class", "error_ajax");
+	            }
 	        }
 	    };
 	    if(options["type"])

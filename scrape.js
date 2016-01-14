@@ -112,7 +112,7 @@ function getList(i, cb){
 						flipPrice : buyPrice,
 						link : urlBook,
 						bookbyteLink : bookbyteLink,
-						status : "new Scrape",
+						status : "new_scrape",
 						price : "-",
 						bookbytePrice : "-",
 						seller : "-"

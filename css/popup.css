@@ -54,8 +54,8 @@ td.link {
 }
 /*end loading*/
 
-tr.error{
-    background: #FFE5E5;
+tr.error_ajax, tr.error_ajax, tr.error_get_price, tr.error_seller{
+    background: #a9a9a9
 }
 
 tr.success{
