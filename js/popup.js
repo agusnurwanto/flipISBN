@@ -36,9 +36,7 @@ $('#scrape-all-data-book').on("click", function(e){
 });
 
 $('#bookbyte').on("click", function(e){
-	chrome.tabs.create({'url': 'https://www.bookbyte.com/buyback2.aspx' }, function(tab) {
-	  // Tab opened.
-	});
+	goToBookByteCart();
 });
 
 $('#newTab').on("click", function(e){
@@ -59,6 +57,50 @@ $('#buyBook').on("click", function(e){
 		alert("There is no active links. Please check again!");
 	}
 });
+
+function goToBookByteCart(){
+	var settings = getSetting();
+	if(settings.thirdPartyServer=="1" || settings.thirdPartyServer=="2"){
+		chrome.tabs.create({'url': 'https://www.bookbyte.com/buyback2.aspx' }, function(tab) {
+		  // Tab opened.
+		});
+	}else if(settings.thirdPartyServer=="3"){
+		var data = JSON.parse(getData({key: "dataBook"}));
+		data.reduce(function(current, next){
+			return new Promise(function(resolve, reject){
+				current.then(function(){
+					if(next.status=="success"){
+						$.ajax({
+							url: next.bookbyteLink
+						})
+						.success(function(){
+							return resolve();
+						})
+						.error(function(err){
+							return resolve();
+						})
+					}else{
+						return resolve();
+					}
+				})
+				.catch(function(err){
+					return Promise.resolve();
+				});
+			})
+			.catch(function(err){
+				return Promise.resolve();
+			});
+		}, Promise.resolve())
+		.then(function(){
+			chrome.tabs.create({'url': 'https://www.bookbyte.com/buyback2.aspx' }, function(tab) {
+			  // Tab opened.
+			});
+		})
+		.catch(function(err){
+			console.log(err);
+		})
+	}
+}
 
 function scrapeAll(event){
 	event.preventDefault();
@@ -440,9 +482,14 @@ function getDataFromBookbyte(options){
 	var seller = options["seller"];
 	var tr = options["tr"];
 	var url = bookbyteLink;
-	if(settings.thirdPartyServer!="1"){
+	if(settings.thirdPartyServer=="2"){
 		url = "https://isbntool-agusnurwanto.rhcloud.com/ajaxFlipLink.php?getPrice=true&url="
 		+encodeURIComponent(bookbyteLink);
+	}else if(settings.thirdPartyServer=="3"){
+		url = "http://bookscouter.com/prices.php?isbn="+dataBook[i]["isbn"];
+		options["next_scrape"] = {
+			thirdPartyServer : settings.thirdPartyServer
+		}
 	}
 	var data = {
 		url: url,
@@ -462,16 +509,21 @@ function getDataFromBookbyte(options){
 			html : html,
 			isbn : dataBook[i]["isbn"]
 		};
-        var err = $("#ctl00_ContentPlaceHolder1_trSpecialMessage", html).text().trim();
+		var err = false;
+		if(settings.thirdPartyServer=="1" || settings.thirdPartyServer=="2")
+        	err = $("#ctl00_ContentPlaceHolder1_trSpecialMessage", html).text().trim();
         if(err){
 			remLoading();
 			$("#tr"+i).attr("class", "error_bookBytePrice");
 			alert("("+site+") $"+price+" | seller: "+seller+" | (bookbyte.com) ERROR:"+err);
 			var priceBookbyte = "ERROR:"+err;
         }else{
-        	var note = $("table.gvItemsBuyback table", html).eq(0)
-                .find("td div span").text()
-                .split("$")[0];
+			var note = false;
+			if(settings.thirdPartyServer=="1" || settings.thirdPartyServer=="2"){
+	        	note = $("table.gvItemsBuyback table", html).eq(0)
+	                .find("td div span").text()
+	                .split("$")[0];
+	        }
             if(note){
 				remLoading();
 				$("#tr"+i).attr("class", "error_bookBytePrice");
@@ -479,23 +531,36 @@ function getDataFromBookbyte(options){
 				var priceBookbyte = note;
 				// idTable = true;
             }else{
-	            var priceBookbyte = $("table.gvItemsBuyback table", html).eq(0)
-	                .find("td div span").text()
-	                .split("$")[1];
+            	var priceBookbyte = 0;
+            	if(settings.thirdPartyServer=="1" || settings.thirdPartyServer=="2"){
+		            priceBookbyte = $("table.gvItemsBuyback table", html).eq(0)
+		                .find("td div span").text()
+		                .split("$")[1];
+		        }else if(settings.thirdPartyServer=="3"){
+		        	var text = $("#offer2 div.book-price-normal", html).text();
+		        	console.log(text, html)
+		        	priceBookbyte = text.match(/\d./g).join(".");
+		        }
 				remLoading();
 				var descriptionPrice = "("+site+") $"+price+" | (bookbyte.com) $"+priceBookbyte;
 				if(price < (+priceBookbyte)){
-					var data = {
-						url: bookbyteLink,
-						type: "GET",
-						options: options
+					if(settings.thirdPartyServer=="1" || settings.thirdPartyServer=="2"){
+						var data = {
+							url: bookbyteLink,
+							type: "GET",
+							options: options
+						}
+						ajaxSend(data)
+							.then(function(res){
+								$("#tr"+i).attr("class", "success");
+								alert(descriptionPrice+" | the price is lowest then bookbyte! | SUCCESS: the book add to cart");
+								dataBook[i]["status"] = "success";
+							});
+					}else if(settings.thirdPartyServer=="3"){
+						$("#tr"+i).attr("class", "success");
+						alert(descriptionPrice+" | the price is lowest then bookbyte! | SUCCESS: the book add to cart");
+						dataBook[i]["status"] = "success";
 					}
-					ajaxSend(data)
-						.then(function(res){
-							$("#tr"+i).attr("class", "success");
-							alert(descriptionPrice+" | the price is lowest then bookbyte! | SUCCESS: the book add to cart");
-							dataBook[i]["status"] = "success";
-						});
 				}else{
 					alert(descriptionPrice+" | the price is more expensive then bookbyte!");
 					optionsCheck["more_expensive"] = true;
@@ -631,11 +696,7 @@ function settingTab(){
 		$("#black-list-recycle").prop("checked",false);
 	}
 	$("#shipping-cost").val(data.shippingCost);
-	if(data["thirdPartyServer"]=="1"){
-		$("#third-party-server").prop("checked",true);
-	}else{
-		$("#third-party-server").prop("checked",false);
-	}
+	$("input[name='scrape-type'][value='"+data["thirdPartyServer"]+"']").prop("checked", true);
 	return;
 }
 
@@ -690,10 +751,7 @@ function saveSetting(event){
 		blackListRecycle = 1;
 	}
 
-	var thirdPartyServer = 0;
-	if($('#third-party-server').is(':checked')==true){
-		thirdPartyServer = 1;
-	}
+	var thirdPartyServer = $("input[name='scrape-type']:checked").val();
 
 	var shippingCost = $('#shipping-cost').val();
 	var data = {
@@ -719,7 +777,7 @@ function getSetting(){
 			blackList: blackList,
 			blackListRecycle: $("#black-list-recycle").val(),
 			shippingCost: $("#shipping-cost").val(),
-			thirdPartyServer: $("#third-party-server").val()
+			thirdPartyServer: $("input[name='scrape-type']:checked").val()
 		};
 	}else{
 		data = JSON.parse(data);
@@ -734,7 +792,26 @@ function ajaxSend(options){
 	        timeout: (600 * 1000),
 	        success: function(res){
 	        	console.log("success send ajax to "+options["url"]);
-	        	resolve(res);
+	        	if(options["options"] && options["options"]["next_scrape"]){
+	        		if(options["options"]["next_scrape"]["thirdPartyServer"]=="3"){
+	        			var html = $.parseHTML(res
+				  			.replace(/<img[^>]*>/g,"")
+				  			.replace(/<link[^>]*>/g,"")
+				  			.replace(/<script[^>]*>/g,""));
+	        			if($("#offer2 div.book-price-normal", html).text())
+	        				return resolve(res);
+	        			var uri = res.split("AjaxRetrieve('")[2].split("',")[0];
+	        			var data = {
+	        				url: "http://bookscouter.com"+uri+"&ts="+ new Date().getTime()
+	        			}
+	        			ajaxSend(data)
+	        			.then(function(res){
+	        				resolve(res);
+	        			});
+	        		}
+	        	}else{
+	        		resolve(res);
+	        	}
 	        },
 	        error: function (jqXHR, textStatus, errorThrown){
 	        	remLoading();

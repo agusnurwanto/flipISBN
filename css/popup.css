@@ -58,6 +58,10 @@ tr.error_ajax, tr.error_ajax, tr.error_get_price, tr.error_seller{
     background: #a9a9a9
 }
 
+tr.error_bookBytePrice{
+    background: #FFE5E5;
+}
+
 tr.success{
     background: #D5FFD2;
 }
