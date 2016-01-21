@@ -92,7 +92,7 @@ function getList(i, cb){
 				promisses[j] = new Promise(function(resolve, reject){
 					var buyPrice = $(b).find('.small-4.text-center span').text();
 					var urlBook = decodeURIComponent($(b).find('.small-4.text-center a').attr('data-url'));
-					var isbn = $(b).find(".small-9 .text-center").text().match(/\d/g).join("");
+					var isbn = urlBook.match(/\d{9,13}/g)[0];
 					var bookbyteLink = "https://www.bookbyte.com/buyback2.aspx?isbns="+isbn;
 					// send data to could server
 					$.ajax({

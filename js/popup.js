@@ -500,10 +500,14 @@ function getDataFromBookbyte(options){
 	.then(function(res){
 		var idTable = false;
 		dataBook[i]["status"] = "error_bookBytePrice";
-		var html = $.parseHTML(res
-  			.replace(/<img[^>]*>/g,"")
-  			.replace(/<link[^>]*>/g,"")
-  			.replace(/<script[^>]*>/g,""));
+		if(settings.thirdPartyServer=="3"){
+			var html = res;
+		}else{
+			var html = $.parseHTML(res
+	  			.replace(/<img[^>]*>/g,"")
+	  			.replace(/<link[^>]*>/g,"")
+	  			.replace(/<script[^>]*>/g,""));
+		}
 		var optionsCheck = {
 			res : res,
 			html : html,
@@ -537,8 +541,9 @@ function getDataFromBookbyte(options){
 		                .find("td div span").text()
 		                .split("$")[1];
 		        }else if(settings.thirdPartyServer=="3"){
-		        	var text = $("#offer2 div.book-price-normal", html).text();
-		        	console.log(text, html)
+		        	//window.html = html;
+		        	var text = $("#offer2 div.book-price-normal", "<div>"+html+"</div>").text();
+		        	//console.log(text, html)
 		        	priceBookbyte = text.match(/\d./g).join(".");
 		        }
 				remLoading();
