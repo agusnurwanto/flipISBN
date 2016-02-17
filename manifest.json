@@ -17,14 +17,18 @@
         "http://amazon.com/*", 
         "http://www.bookbyte.com/*", 
         "http://chegg.com/*", 
+        "http://isbntool-agusnurwanto.rhcloud.com/*",
         "https://flippiness.com/*", 
         "https://ebay.com/*", 
         "https://amazon.com/*", 
         "https://www.bookbyte.com/*", 
-        "https://chegg.com/*"
+        "https://chegg.com/*",
+        "https://isbntool-agusnurwanto.rhcloud.com/*",
+        "http://localhost/*"
       ],
       "js": ["jquery.min.js", "scrape.js"]
     }],
+  "web_accessible_resources": ["scrape.js"],
   "browser_action": {
     "default_icon": "images/flip.png",
     "default_popup": "popup.html"

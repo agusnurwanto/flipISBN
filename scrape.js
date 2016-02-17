@@ -148,3 +148,131 @@ function serialize(obj){
 	}
 	return str;
 }
+
+function cs_getPage(arg){
+	var ids = arg.ids;
+    var isbn_number = ids["isbn"].toString().match(/\d/g);
+  	isbn_number = isbn_number.join("");
+  	isbn_number = changeFormat(isbn_number);
+  	var cekEmpty = arg.cekEmpty;
+  	var cekSucces = arg.cekSucces;
+  	var ret = {
+  		cekSucces: false,
+  		cekEmpty: false,
+  		success: 0
+  	};
+  	return new Promise(function(resolve, reject){
+	    var action_type = $("input[name='scrape-type']:checked").val();
+	    $.ajax({
+	      	url : url = "https://bookscouter.com/prices.php?isbn="+isbn_number,
+	      	type: "GET",
+	      	success: function(res){
+        		var html = $.parseHTML(res
+	                .replace(/<img[^>]*>/g,"")
+	                .replace(/<link[^>]*>/g,"")
+	                .replace(/<script[^>]*>/g,""));
+	    		var text = $("#offer2 div.book-price-normal", html).text();
+	    		if(text){
+		        	try{
+		        		priceBookbyte = text.trim().split("$")[1];
+			            var real_price = $("table.gvItemsBuyback table", html).eq(0)
+			              .find("td div span").text()
+			              .split("$")[1];
+			          	var id = $("#lastID").val();
+			          	var options = {
+				            id: (+id)+1,
+				            isbn_number: isbn_number,
+				            custom_price: ids["buy"] || 0,
+				            real_price: real_price
+			          	}
+			            cekSucces += "<br>"+isbn_number+" is available. Sell Price: $"+real_price;
+			            ret.cekSucces = cekSucces;
+			            ret.options = options;
+			            ret.success = 1;
+			            return resolve(ret);
+		        	}catch(err){
+		              	cekEmpty += "<br>"+err;
+		              	ret.cekEmpty = cekEmpty;
+		              	return resolve(ret);
+		        	}
+	    		}
+    			var uri = res.split("AjaxRetrieve('")[2].split("',")[0];
+    			var data = {
+    				url: "https://bookscouter.com"+uri+"&ts="+ new Date().getTime()
+    			}
+    			$.ajax({
+			      	url : data.url,
+			      	type: "GET",
+			      	success: function(res){
+		        		var html = res
+			                .replace(/<img[^>]*>/g,"")
+			                .replace(/<link[^>]*>/g,"")
+			                .replace(/<script[^>]*>/g,"");
+	    				var text = $("#offer2 div.book-price-normal", "<div>"+html+"</div>").text();
+			        	//console.log(text, html)
+			        	try{
+			        		var real_price = text.trim().split("$")[1];
+				          	var id = $("#lastID").val();
+				          	var options = {
+					            id: (+id)+1,
+					            isbn_number: isbn_number,
+					            custom_price: ids["buy"] || 0,
+					            real_price: real_price
+				          	}
+				            cekSucces += "<br>"+isbn_number+" is available. Sell Price: $"+real_price
+				            ret.cekSucces = cekSucces;
+				            ret.options = options;
+				            ret.success = 1;
+				            return resolve(ret);
+			        	}catch(err){
+			              	cekEmpty += "<br>"+err;
+			              	ret.cekEmpty = cekEmpty;
+			              	return resolve(ret);
+			        	}
+	    			},
+				  	error: function (jqXHR, textStatus, errorThrown){
+				  		console.log("errorThrown", errorThrown);
+			          	cekEmpty += "<br>"+'Error adding / update data';
+		              	ret.cekEmpty = cekEmpty;
+		              	return resolve(ret);
+				  	}
+	    		});
+		  	},
+		  	error: function (jqXHR, textStatus, errorThrown){
+		  		console.log("errorThrown", errorThrown);
+	          	cekEmpty += "<br>"+'Error adding / update data';
+              	ret.cekEmpty = cekEmpty;
+              	return resolve(ret);
+		  	}
+	    });
+	})
+  	.catch(function(err){
+	    console.log(err.stack);
+		ret.cekEmpty = cekEmpty + err.stack;
+	    return Promise.resolve(ret);
+  	});
+}
+
+
+function changeFormat(id){
+  	if(id.length<10){
+    	id = "0"+id;
+    	return changeFormat(id);
+  	}else{
+    	return id;
+  	}
+}
+
+window.addEventListener("message", function(event) {
+  	// We only accept messages from ourselves
+  	if (event.source != window)
+    	return;
+
+  	if (event.data.arg) {
+	    cs_getPage(event.data.arg)
+	    .then(function(res){
+	    	console.log("res", res);
+    		window.postMessage({ nav: "afterScrape", res: res }, "*");
+    	});
+  	}
+}, false);

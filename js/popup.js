@@ -43,6 +43,10 @@ $('#newTab').on("click", function(e){
 	chrome.tabs.create({ url: window.location.href });
 });
 
+// $('#bulk-action').on("click", function(e){
+// 	bulkAction();
+// });
+
 $('#buyBook').on("click", function(e){
 	var data = $('table.data-table tbody tr');
 	var check = false;
@@ -57,6 +61,10 @@ $('#buyBook').on("click", function(e){
 		alert("There is no active links. Please check again!");
 	}
 });
+
+function bulkAction(){
+	
+}
 
 function goToBookByteCart(){
 	var settings = getSetting();
