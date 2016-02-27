@@ -149,7 +149,7 @@ function serialize(obj){
 	return str;
 }
 
-function cs_getPage(arg){
+function cs_getPage(arg, resolve_old){
 	var ids = arg.ids;
     var isbn_number = ids["isbn"].toString().match(/\d/g);
   	isbn_number = isbn_number.join("");
@@ -164,7 +164,7 @@ function cs_getPage(arg){
   	return new Promise(function(resolve, reject){
 	    var action_type = $("input[name='scrape-type']:checked").val();
 	    $.ajax({
-	      	url : url = "https://bookscouter.com/prices.php?isbn="+isbn_number,
+	      	url : url = "https://bookscouter.com/prices.php?isbn="+isbn_number+'&all',
 	      	type: "GET",
 	      	success: function(res){
         		var html = $.parseHTML(res
@@ -174,10 +174,12 @@ function cs_getPage(arg){
 	    		var text = $("#offer2 div.book-price-normal", html).text();
 	    		if(text){
 		        	try{
-		        		priceBookbyte = text.trim().split("$")[1];
-			            var real_price = $("table.gvItemsBuyback table", html).eq(0)
-			              .find("td div span").text()
-			              .split("$")[1];
+		        		real_price = text.trim().split("$")[1];
+		        		if(!real_price){
+				            if(resolve_old)
+				            	return cs_getPage(arg, resolve_old);
+		        			return cs_getPage(arg, resolve);
+		        		}
 			          	var id = $("#lastID").val();
 			          	var options = {
 				            id: (+id)+1,
@@ -189,10 +191,14 @@ function cs_getPage(arg){
 			            ret.cekSucces = cekSucces;
 			            ret.options = options;
 			            ret.success = 1;
+			            if(resolve_old)
+			            	return resolve_old(ret);
 			            return resolve(ret);
 		        	}catch(err){
 		              	cekEmpty += "<br>"+err;
 		              	ret.cekEmpty = cekEmpty;
+			            if(resolve_old)
+			            	return resolve_old(ret);
 		              	return resolve(ret);
 		        	}
 	    		}
@@ -212,6 +218,11 @@ function cs_getPage(arg){
 			        	//console.log(text, html)
 			        	try{
 			        		var real_price = text.trim().split("$")[1];
+			        		if(!real_price){
+					            if(resolve_old)
+					            	return cs_getPage(arg, resolve_old);
+			        			return cs_getPage(arg, resolve);
+			        		}
 				          	var id = $("#lastID").val();
 				          	var options = {
 					            id: (+id)+1,
@@ -223,10 +234,14 @@ function cs_getPage(arg){
 				            ret.cekSucces = cekSucces;
 				            ret.options = options;
 				            ret.success = 1;
+				            if(resolve_old)
+				            	return resolve_old(ret);
 				            return resolve(ret);
 			        	}catch(err){
 			              	cekEmpty += "<br>"+err;
 			              	ret.cekEmpty = cekEmpty;
+				            if(resolve_old)
+				            	return resolve_old(ret);
 			              	return resolve(ret);
 			        	}
 	    			},
@@ -234,6 +249,8 @@ function cs_getPage(arg){
 				  		console.log("errorThrown", errorThrown);
 			          	cekEmpty += "<br>"+'Error adding / update data';
 		              	ret.cekEmpty = cekEmpty;
+			            if(resolve_old)
+			            	return resolve_old(ret);
 		              	return resolve(ret);
 				  	}
 	    		});
@@ -242,6 +259,8 @@ function cs_getPage(arg){
 		  		console.log("errorThrown", errorThrown);
 	          	cekEmpty += "<br>"+'Error adding / update data';
               	ret.cekEmpty = cekEmpty;
+	            if(resolve_old)
+	            	return resolve_old(ret);
               	return resolve(ret);
 		  	}
 	    });
@@ -249,6 +268,8 @@ function cs_getPage(arg){
   	.catch(function(err){
 	    console.log(err.stack);
 		ret.cekEmpty = cekEmpty + err.stack;
+        if(resolve_old)
+        	return resolve_old(ret);
 	    return Promise.resolve(ret);
   	});
 }
